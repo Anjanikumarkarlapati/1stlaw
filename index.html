@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton's First Law & Inertia Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 { color: #333; margin-bottom: 5px; }
+        p { color: #666; margin-top: 0; margin-bottom: 20px; text-align: center; max-width: 600px; }
+        canvas {
+            background-color: #ffffff;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        button.brake { background-color: #dc3545; }
+        button.brake:hover { background-color: #bd2130; }
+        button.toggle { background-color: #28a745; }
+        button.toggle:hover { background-color: #218838; }
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Newton's First Law & Inertia</h1>
+    <p>
+        <strong>First Law:</strong> Objects keep moving at constant speed unless friction or brakes stop them.<br>
+        <strong>Inertia:</strong> The larger mass (Heavy Block) requires more force/time to slow down!
+    </p>
+
+    <canvas id="simCanvas" width="800" height="400"></canvas>
+
+    <div class="controls">
+        <button onclick="startSimulation()">Push Objects (Apply Force)</button>
+        <button class="brake" onclick="applyBrakes()">Apply Brakes (External Force)</button>
+        <button class="toggle" id="frictionBtn" onclick="toggleFriction()">Friction: ON</button>
+        <button onclick="resetSimulation()">Reset</button>
+    </div>
+
+    <div class="legend">
+        <span style="color: #e67e22;">■ Small Mass (Low Inertia)</span>
+        <span style="color: #9b59b6;">■ Large Mass (High Inertia)</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const frictionBtn = document.getElementById('frictionBtn');
+
+        // Global Simulation States
+        let frictionEnabled = true;
+        let brakesApplied = false;
+
+        class Block {
+            constructor(y, mass, size, color, label) {
+                this.startX = 50;
+                this.x = this.startX;
+                this.y = y;
+                this.mass = mass;
+                this.size = size;
+                this.color = color;
+                this.label = label;
+                this.vx = 0;
+                this.ax = 0;
+            }
+
+            push() {
+                const pushForce = 15;
+                this.vx = pushForce / Math.sqrt(this.mass);
+                brakesApplied = false;
+            }
+
+            update() {
+                let currentFriction = 0;
+
+                if (frictionEnabled && this.vx > 0) {
+                    currentFriction += 0.015;
+                }
+
+                if (brakesApplied && this.vx > 0) {
+                    currentFriction += 0.15 / this.mass;
+                }
+
+                if (this.vx > 0) {
+                    this.vx -= currentFriction;
+                    if (this.vx < 0) this.vx = 0;
+                }
+
+                this.x += this.vx;
+
+                if (this.x > canvas.width) {
+                    this.x = -this.size;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 2;
+                ctx.moveTo(0, this.y + this.size);
+                ctx.lineTo(canvas.width, this.y + this.size);
+                ctx.stroke();
+
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+
+                ctx.fillStyle = '#333';
+                ctx.font = '14px Arial';
+                ctx.fillText(`${this.label} (Mass: ${this.mass}kg)`, this.x, this.y - 25);
+                ctx.font = '12px Courier';
+                ctx.fillText(`Speed: ${this.vx.toFixed(2)} m/s`, this.x, this.y - 10);
+            }
+
+            reset() {
+                this.x = this.startX;
+                this.vx = 0;
+            }
+        }
+
+        const smallObj = new Block(100, 1, 40, '#e67e22', 'Light Block');
+        const largeObj = new Block(260, 4, 60, '#9b59b6', 'Heavy Block');
+
+        function startSimulation() {
+            smallObj.push();
+            largeObj.push();
+        }
+
+        function applyBrakes() {
+            brakesApplied = true;
+        }
+
+        function toggleFriction() {
+            frictionEnabled = !frictionEnabled;
+            frictionBtn.innerText = frictionEnabled ? "Friction: ON" : "Friction: OFF";
+            frictionBtn.style.backgroundColor = frictionEnabled ? "#28a745" : "#777";
+        }
+
+        function resetSimulation() {
+            smallObj.reset();
+            largeObj.reset();
+            brakesApplied = false;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            smallObj.update();
+            smallObj.draw();
+
+            largeObj.update();
+            largeObj.draw();
+
+            ctx.fillStyle = "#666";
+            ctx.font = "13px Arial";
+            ctx.fillText(frictionEnabled ? "Surface status: Normal Friction" : "Surface status: Frictionless (Ideal Ice)", 20, 380);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
